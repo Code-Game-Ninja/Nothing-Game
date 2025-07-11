@@ -32,6 +32,8 @@ const aboutVoidBg = document.getElementById('about-void-bg');
 const startBtn = document.getElementById('start-btn');
 const entranceSound = document.getElementById('entrance-sound');
 const aboutSound = document.getElementById('about-sound');
+const entrancePrompt = document.getElementById('entrance-prompt');
+const tapOverlay = document.getElementById('tap-overlay');
 
 // --- Void Dots Animation for About Overlay ---
 function createVoidDots(num = 18) {
@@ -220,11 +222,30 @@ function showAboutOverlay() {
         aboutSound.volume = 0.7;
         aboutSound.play();
     }
+    // Attach Start button event listener here
+    const startBtn = document.getElementById('start-btn');
+    if (startBtn) {
+        startBtn.onclick = showGame;
+    }
 }
 function showGame() {
     aboutOverlay.classList.add('hidden');
     gameContainer.style.display = 'flex';
-    fadeOutAudio(aboutSound);
+    // Immediately stop About sound
+    if (aboutSound) {
+        aboutSound.pause();
+        aboutSound.currentTime = 0;
+    }
+    // Enable and play ambient sound by default
+    ambientEnabled = true;
+    if (ambientToggle) ambientToggle.textContent = '🔊';
+    if (ambientSound) {
+        ambientSound.currentTime = 0;
+        ambientSound.volume = 1;
+        ambientSound.play().catch(e => {
+            console.log('Ambient sound play error:', e);
+        });
+    }
     init();
 }
 
@@ -232,53 +253,48 @@ function showGame() {
 if (gameContainer) gameContainer.style.display = 'none';
 
 window.addEventListener('DOMContentLoaded', () => {
-    // Show entrance overlay, then about overlay after animation or on click
-    entranceOverlay.classList.remove('hidden');
+    // Reset all audio elements on refresh
+    [entranceSound, aboutSound, ambientSound, ...clickSounds, voidSound, specialSound].forEach(audio => {
+        if (audio) {
+            audio.pause();
+            audio.currentTime = 0;
+        }
+    });
+    // Show tap overlay, hide everything else
+    if (tapOverlay) tapOverlay.classList.remove('hidden');
+    entranceOverlay.classList.add('hidden');
     aboutOverlay.classList.add('hidden');
     gameContainer.style.display = 'none';
-    // After animation (5.5s), show about overlay
-    setTimeout(() => {
-        showAboutOverlay();
-    }, 5500);
-    // Or skip animation on click/tap
-    let entranceSoundPlayed = false;
-    let entranceSkippable = false;
-    function playEntranceSoundOnce() {
-        if (!entranceSoundPlayed && entranceSound) {
+
+    function startEntranceAfterTap() {
+        // Hide tap overlay, show entrance overlay
+        if (tapOverlay) tapOverlay.classList.add('hidden');
+        entranceOverlay.classList.remove('hidden');
+        // Play entrance sound
+        if (entranceSound) {
             entranceSound.currentTime = 0;
             entranceSound.volume = 1;
             entranceSound.play().catch(e => {
                 console.log('Entrance sound play error:', e);
             });
-            entranceSoundPlayed = true;
         }
+        // Start entrance animation (reset animation)
+        const title = document.getElementById('entrance-title');
+        if (title) {
+            title.style.animation = 'none';
+            void title.offsetWidth;
+            title.style.animation = '';
+        }
+        // After 11s, show About overlay
+        setTimeout(() => {
+            showAboutOverlay();
+        }, 6000);
     }
-    // Play entrance sound on first interaction (if required by browser)
-    entranceOverlay.addEventListener('click', playEntranceSoundOnce, { once: true });
-    entranceOverlay.addEventListener('touchstart', playEntranceSoundOnce, { once: true });
-    entranceOverlay.addEventListener('keydown', playEntranceSoundOnce, { once: true });
-
-    // Only allow skipping entrance after 10 seconds (DISABLED: always wait full 11s)
-    // function tryShowAboutOverlay() {
-    //     if (entranceSkippable) showAboutOverlay();
-    // }
-    // entranceOverlay.addEventListener('click', tryShowAboutOverlay);
-    // entranceOverlay.addEventListener('touchstart', tryShowAboutOverlay);
-    // entranceOverlay.addEventListener('keydown', tryShowAboutOverlay);
-
-    // After 10 seconds, allow user to skip
-    setTimeout(() => {
-        entranceSkippable = true;
-    }, 5000);
-
-    // Automatically show About after 11s if user does nothing
-    setTimeout(() => {
-        if (entranceSkippable) showAboutOverlay();
-    }, 6000);
-
-    // Start game on button click
-    if (startBtn) startBtn.addEventListener('click', showGame);
-    createVoidDots();
+    // Only start entrance after first user interaction
+    const startEvents = ['click', 'touchstart', 'keydown'];
+    startEvents.forEach(evt => {
+        if (tapOverlay) tapOverlay.addEventListener(evt, startEntranceAfterTap, { once: true });
+    });
 });
 
 // --- Main Game Logic ---
@@ -377,5 +393,7 @@ function init() {
     document.addEventListener('keydown', handleKey);
     document.addEventListener('contextmenu', handleContextMenu);
     ambientToggle.addEventListener('click', toggleAmbient);
+    // Ensure ambient toggle reflects enabled state
+    if (ambientToggle) ambientToggle.textContent = ambientEnabled ? '🔊' : '🔇';
 }
  
