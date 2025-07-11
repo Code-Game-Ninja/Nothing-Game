@@ -10,6 +10,7 @@ let flickerTimeout = null;
 let poeticMsgTimeout = null;
 let fiveMinTimer = null;
 let clickCount = 0;
+let fadeMsgTimeout = null;
 
 // --- DOM Elements ---
 const gameContainer = document.getElementById('game-container');
@@ -53,10 +54,11 @@ function createVoidDots(num = 18) {
 
 // --- Utility Functions ---
 function fadeMessage(text, duration = 2000) {
+    if (fadeMsgTimeout) clearTimeout(fadeMsgTimeout);
     message.textContent = text;
     message.classList.remove('hidden');
     message.style.opacity = '0.85';
-    setTimeout(() => {
+    fadeMsgTimeout = setTimeout(() => {
         message.style.opacity = '0';
         setTimeout(() => {
             message.classList.add('hidden');
